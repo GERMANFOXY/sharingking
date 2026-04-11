@@ -183,7 +183,7 @@ select cron.schedule(
 2. Projekt in Vercel importieren.
 3. Framework automatisch als Next.js erkennen lassen.
 4. In den Vercel Project Settings alle Variablen aus `.env.example` setzen.
-5. `NEXT_PUBLIC_APP_URL` auf die spaetere Produktiv-Domain setzen, z. B. `https://drop7.xyz`.
+5. `NEXT_PUBLIC_APP_URL` auf die spaetere Produktiv-Domain setzen, z. B. `https://sharingking.vercel.app`.
 6. Nach dem ersten Deploy die finale Domain mit Vercel verbinden.
 
 ### Supabase
@@ -194,7 +194,7 @@ select cron.schedule(
 4. Auth fuer E-Mail/Passwort und Magic Link aktivieren.
 5. Redirect-URLs fuer Auth setzen:
   - `http://localhost:3000/auth/callback`
-  - `https://drop7.xyz/auth/callback`
+  - `https://sharingking.vercel.app/auth/callback`
 6. Edge-Function-Variablen und Vault-Secrets setzen.
 7. Function `cleanup-expired-uploads` deployen.
 8. Cron-Job ueber die Migration aktivieren.
@@ -211,8 +211,8 @@ select cron.schedule(
 
 ### Platzhalter vor Launch ersetzen
 
-- Domain-Platzhalter: `https://drop7.xyz`
-- GitHub-Repo-Platzhalter: `https://github.com/yourname/drop7`
+- Domain-Platzhalter: `https://sharingking.vercel.app`
+- GitHub-Repo-Platzhalter: `https://github.com/GERMANFOXY/drop7`
 
 ### Nach dem ersten erfolgreichen Test
 

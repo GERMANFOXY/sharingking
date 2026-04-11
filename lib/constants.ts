@@ -6,8 +6,8 @@ export const APP_COPY = {
 } as const;
 
 export const APP_LINKS = {
-  siteUrl: "https://drop7.xyz",
-  githubUrl: "https://github.com/yourname/drop7",
+  siteUrl: "https://sharingking.vercel.app",
+  githubUrl: "https://github.com/GERMANFOXY/drop7",
 } as const;
 
 export const APP_LIMITS = {
