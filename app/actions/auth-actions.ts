@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 
 import { createServerClient } from "@/lib/supabase/server";
-import { getBaseUrl } from "@/lib/utils";
+import { getAppUrl } from "@/lib/utils";
 
 export type AuthActionState = {
   error?: string;
@@ -54,7 +54,7 @@ export async function registerAction(_: AuthActionState, formData: FormData): Pr
     email,
     password,
     options: {
-      emailRedirectTo: `${await getBaseUrl()}/auth/callback?next=/dashboard`,
+      emailRedirectTo: `${getAppUrl()}/auth/callback?next=/dashboard`,
     },
   });
 
@@ -82,7 +82,7 @@ export async function sendMagicLinkAction(_: AuthActionState, formData: FormData
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: `${await getBaseUrl()}/auth/callback?next=/dashboard`,
+      emailRedirectTo: `${getAppUrl()}/auth/callback?next=/dashboard`,
     },
   });
 

@@ -1,5 +1,4 @@
 import { clsx, type ClassValue } from "clsx";
-import { headers } from "next/headers";
 import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
@@ -108,10 +107,6 @@ export function formatUploadErrorMessage(message: string) {
   return message;
 }
 
-export async function getBaseUrl() {
-  const headerList = await headers();
-  const protocol = headerList.get("x-forwarded-proto") ?? "http";
-  const host = headerList.get("x-forwarded-host") ?? headerList.get("host") ?? "localhost:3000";
-
-  return `${protocol}://${host}`;
+export function getAppUrl() {
+  return process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? "http://localhost:3000";
 }
