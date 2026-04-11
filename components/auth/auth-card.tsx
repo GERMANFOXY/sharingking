@@ -34,6 +34,13 @@ export function AuthCard({ mode }: AuthCardProps) {
         <form action={authAction} className="space-y-4">
           <Input type="email" name="email" placeholder="name@beispiel.de" autoComplete="email" required />
           <Input type="password" name="password" placeholder="Passwort" autoComplete={mode === "login" ? "current-password" : "new-password"} required />
+          {mode === "login" ? (
+            <div className="-mt-1 flex justify-end">
+              <Link href="/forgot-password" className="text-sm text-primary hover:text-primary/80">
+                Passwort vergessen?
+              </Link>
+            </div>
+          ) : null}
           {mode === "register" ? (
             <Input type="password" name="confirmPassword" placeholder="Passwort wiederholen" autoComplete="new-password" required />
           ) : null}

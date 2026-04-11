@@ -95,6 +95,63 @@ export async function sendMagicLinkAction(_: AuthActionState, formData: FormData
   };
 }
 
+export async function sendPasswordResetAction(_: AuthActionState, formData: FormData): Promise<AuthActionState> {
+  const email = readString(formData, "email").toLowerCase();
+
+  if (!email) {
+    return { error: "Bitte eine gueltige E-Mail angeben." };
+  }
+
+  const supabase = await createServerClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${getAppUrl()}/auth/callback?next=/reset-password`,
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  return {
+    success: "Falls ein Konto existiert, wurde eine E-Mail zum Zuruecksetzen des Passworts versendet.",
+  };
+}
+
+export async function updatePasswordAction(_: AuthActionState, formData: FormData): Promise<AuthActionState> {
+  const password = readString(formData, "password");
+  const confirmPassword = readString(formData, "confirmPassword");
+
+  if (!password || !confirmPassword) {
+    return { error: "Bitte alle Felder ausfuellen." };
+  }
+
+  if (password.length < 8) {
+    return { error: "Das Passwort muss mindestens 8 Zeichen lang sein." };
+  }
+
+  if (password !== confirmPassword) {
+    return { error: "Die Passwoerter stimmen nicht ueberein." };
+  }
+
+  const supabase = await createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Deine Reset-Sitzung ist abgelaufen. Fordere bitte einen neuen Link an." };
+  }
+
+  const { error } = await supabase.auth.updateUser({
+    password,
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  redirect("/dashboard");
+}
+
 export async function signOutAction() {
   const supabase = await createServerClient();
   await supabase.auth.signOut();
