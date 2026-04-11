@@ -1,5 +1,6 @@
 export const APP_COPY = {
-  name: "Drop7",
+  name: "SHARINGKING",
+  shortName: "SK",
   slogan: "7 Tage. Kostenlos. Ohne Bullshit.",
   heroDescription:
     "Kostenlose Upload-Plattform fuer Bilder und Dateien, mit klaren Limits, ohne Werbung und mit automatischer Loeschung nach sieben Tagen.",
@@ -7,7 +8,7 @@ export const APP_COPY = {
 
 export const APP_LINKS = {
   siteUrl: "https://sharingking.vercel.app",
-  githubUrl: "https://github.com/GERMANFOXY/drop7",
+  githubUrl: "https://github.com/GERMANFOXY/sharingking",
 } as const;
 
 export const APP_LIMITS = {

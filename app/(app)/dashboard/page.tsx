@@ -8,7 +8,7 @@ import { createServerClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: "Meine Uploads",
-  description: "Dashboard fuer registrierte FreeHub-Nutzer mit Upload-Verwaltung, Share-Links und Tagesverbrauch.",
+  description: "Dashboard fuer registrierte SHARINGKING-Nutzer mit Upload-Verwaltung, Share-Links und Tagesverbrauch.",
   robots: {
     index: false,
     follow: false,

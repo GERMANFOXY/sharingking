@@ -16,7 +16,7 @@ export async function SiteHeader() {
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link href="/" className="flex items-center gap-3">
           <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/15 text-sm font-semibold text-primary shadow-ambient">
-            D7
+            {APP_COPY.shortName}
           </span>
           <div>
             <p className="text-base font-semibold tracking-tight text-white">{APP_COPY.name}</p>

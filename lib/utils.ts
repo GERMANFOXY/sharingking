@@ -68,7 +68,7 @@ export function getUploadUnavailableReason(status: "not-found" | "expired" | "de
     return {
       eyebrow: "Abgelaufen",
       title: "Dieser Link ist abgelaufen",
-      description: "FreeHub entfernt Uploads automatisch nach sieben Tagen. Der Link ist deshalb nicht mehr verfuegbar.",
+      description: "SHARINGKING entfernt Uploads automatisch nach sieben Tagen. Der Link ist deshalb nicht mehr verfuegbar.",
     };
   }
 

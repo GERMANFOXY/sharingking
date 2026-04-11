@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: FilePageProps): Promise<Metad
 
   return {
     title: upload.title ?? upload.original_name,
-    description: `Geteilte Datei auf FreeHub: ${upload.original_name}`,
+    description: `Geteilte Datei auf SHARINGKING: ${upload.original_name}`,
   };
 }
 
@@ -67,7 +67,7 @@ export default async function FilePage({ params }: FilePageProps) {
         <p className="text-sm uppercase tracking-[0.25em] text-primary/80">Datei-Link</p>
         <h1 className="mt-3 text-2xl font-semibold text-white">{upload.original_name}</h1>
         <p className="mt-4 text-sm text-muted-foreground">
-          Der Link bleibt stabil unter der FreeHub-URL, waehrend die Datei intern ueber eine kurzlebige Signed URL aus
+          Der Link bleibt stabil unter der SHARINGKING-URL, waehrend die Datei intern ueber eine kurzlebige Signed URL aus
           dem privaten Storage ausgeliefert wird.
         </p>
         <Button asChild className="mt-6">

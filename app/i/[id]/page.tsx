@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: ImagePageProps): Promise<Meta
 
   return {
     title: upload.title ?? upload.original_name,
-    description: upload.alt_text ?? `Geteiltes Bild auf FreeHub: ${upload.original_name}`,
+    description: upload.alt_text ?? `Geteiltes Bild auf SHARINGKING: ${upload.original_name}`,
   };
 }
 

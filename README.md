@@ -1,4 +1,4 @@
-# Drop7
+# SHARINGKING
 
 Minimalistische File- und Image-Upload-Plattform auf Basis von Next.js 15, Tailwind CSS, shadcn/ui und Supabase.
 
@@ -212,7 +212,7 @@ select cron.schedule(
 ### Platzhalter vor Launch ersetzen
 
 - Domain-Platzhalter: `https://sharingking.vercel.app`
-- GitHub-Repo-Platzhalter: `https://github.com/GERMANFOXY/drop7`
+- GitHub-Repo-Platzhalter: `https://github.com/GERMANFOXY/sharingking`
 
 ### Nach dem ersten erfolgreichen Test
 

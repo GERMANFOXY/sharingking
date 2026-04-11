@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Impressum",
-  description: "Platzhalter fuer das Impressum von Drop7.",
+  description: "Platzhalter fuer das Impressum von SHARINGKING.",
   robots: {
     index: false,
     follow: false,

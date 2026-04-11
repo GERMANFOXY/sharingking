@@ -7,7 +7,7 @@ import { getLatestPublicImages } from "@/lib/supabase/queries";
 
 export const metadata: Metadata = {
   title: "Kostenlose Datei- und Bild-Uploads",
-  description: "Drop7 ist eine kostenlose Upload-Plattform fuer Bilder und Dateien mit Galerie, Share-Links und automatischer Loeschung nach sieben Tagen.",
+  description: "SHARINGKING ist eine kostenlose Upload-Plattform fuer Bilder und Dateien mit Galerie, Share-Links und automatischer Loeschung nach sieben Tagen.",
   alternates: {
     canonical: "/",
   },
@@ -32,7 +32,7 @@ export default async function HomePage() {
     <div className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-7xl flex-col gap-14 px-4 pb-16 pt-8 sm:px-6 lg:px-8 lg:pb-24 lg:pt-10">
       <section className="flex flex-col gap-3 pt-2">
         <div className="inline-flex w-fit items-center gap-3 rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-sm text-primary">
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary/15 font-semibold">D7</span>
+          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary/15 font-semibold">{APP_COPY.shortName}</span>
           <span>{APP_COPY.name}</span>
         </div>
         <div>

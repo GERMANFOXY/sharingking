@@ -67,7 +67,7 @@ export async function getRequestIpHash() {
   const forwarded = headerList.get("x-forwarded-for");
   const realIp = headerList.get("x-real-ip");
   const rawIp = forwarded?.split(",")[0]?.trim() || realIp || "0.0.0.0";
-  const salt = process.env.UPLOAD_IP_HASH_SALT ?? "freehub-local-salt";
+  const salt = process.env.UPLOAD_IP_HASH_SALT ?? "sharingking-local-salt";
 
   return createHash("sha256").update(`${salt}:${rawIp}`).digest("hex");
 }
