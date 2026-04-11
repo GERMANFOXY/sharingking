@@ -43,16 +43,13 @@ function toDraft(item: UploadItemState, isPublic: boolean): UploadDraft {
 function uploadWithProgress(file: File, prepared: PreparedUpload, onProgress: (loaded: number) => void) {
   return new Promise<void>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    const formData = new FormData();
-
-    formData.append("cacheControl", "3600");
-    formData.append("", file);
 
     xhr.open("PUT", prepared.signedUrl);
     xhr.setRequestHeader("x-upsert", "false");
+    xhr.setRequestHeader("content-type", file.type || "application/octet-stream");
     xhr.upload.onprogress = (event) => {
       if (event.lengthComputable) {
-        onProgress(event.loaded);
+        onProgress(Math.min(event.loaded, file.size));
       }
     };
     xhr.onerror = () => reject(new Error(`Upload fehlgeschlagen: ${prepared.name}`));
@@ -65,7 +62,7 @@ function uploadWithProgress(file: File, prepared: PreparedUpload, onProgress: (l
 
       reject(new Error(`Upload fehlgeschlagen: ${prepared.name}`));
     };
-    xhr.send(formData);
+    xhr.send(file);
   });
 }
 
@@ -88,7 +85,7 @@ export function HeroUploadClient({ isAuthenticated }: HeroUploadClientProps) {
     () => items.reduce((sum, item) => sum + item.file.size * (item.progress / 100), 0),
     [items],
   );
-  const progressValue = totalBytes === 0 ? 0 : Math.round((uploadedBytes / totalBytes) * 100);
+  const progressValue = totalBytes === 0 ? 0 : Math.min(Math.round((uploadedBytes / totalBytes) * 100), 100);
 
   function updateItem(clientId: string, updater: (current: UploadItemState) => UploadItemState) {
     setItems((current) => current.map((item) => (item.clientId === clientId ? updater(item) : item)));
@@ -139,7 +136,7 @@ export function HeroUploadClient({ isAuthenticated }: HeroUploadClientProps) {
         updateItem(item.clientId, (current) => ({ ...current, status: "uploading", error: undefined }));
 
         await uploadWithProgress(item.file, nextPrepared, (loaded) => {
-          const nextProgress = Math.round((loaded / item.file.size) * 100);
+          const nextProgress = Math.min(Math.round((loaded / item.file.size) * 100), 100);
 
           updateItem(item.clientId, (current) => ({ ...current, progress: nextProgress, status: "uploading" }));
         });
