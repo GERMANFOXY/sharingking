@@ -18,8 +18,8 @@ const featureItems = [
   },
   {
     icon: ShieldCheck,
-    title: "Klare Limits",
-    description: "Anonym begrenzt, registriert mit 2 GB pro Kalendertag.",
+    title: "Datenschutz & Limits",
+    description: "Anonyme Uploads sind privat, registrierte Konten nutzen bis zu 2 GB pro Kalendertag.",
   },
 ];
 
@@ -42,7 +42,7 @@ export async function HeroUploadShell() {
           </p>
         </div>
         <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-          <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2">Anonym: max. 50 MB</span>
+          <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2">Anonym: privat, max. 50 MB</span>
           <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2">3 Uploads pro Stunde pro IP</span>
           <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2">Registriert: 2 GB pro Tag</span>
         </div>

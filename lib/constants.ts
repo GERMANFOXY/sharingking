@@ -1,9 +1,9 @@
 export const APP_COPY = {
   name: "SHARINGKING",
   shortName: "SK",
-  slogan: "7 Tage. Kostenlos. Ohne Bullshit.",
+  slogan: "Sicher teilen. Klar verwalten.",
   heroDescription:
-    "Kostenlose Upload-Plattform fuer Bilder und Dateien, mit klaren Limits, ohne Werbung und mit automatischer Loeschung nach sieben Tagen.",
+    "Professionelle Plattform fuer Datei- und Bildfreigaben mit klaren Richtlinien, transparenter Nutzung und automatischer Loeschung nach sieben Tagen.",
 } as const;
 
 export const APP_LINKS = {

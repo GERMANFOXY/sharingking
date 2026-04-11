@@ -170,7 +170,7 @@ export async function prepareUploadsAction(files: UploadDraft[]): Promise<Prepar
           storagePath,
           signedUrl: data.signedUrl,
           token: data.token,
-          isPublic: mode === "registered" ? file.isPublic : true,
+          isPublic: mode === "registered" ? file.isPublic : false,
         } satisfies PreparedUpload;
       }),
     );
@@ -245,7 +245,7 @@ export async function completeUploadsAction(uploads: CompleteUploadInput[]): Pro
       mime_type: upload.mimeType,
       extension: upload.extension,
       size_bytes: upload.size,
-      is_public: mode === "registered" ? upload.isPublic : true,
+      is_public: mode === "registered" ? upload.isPublic : false,
     }));
 
     const { data, error } = await admin

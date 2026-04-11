@@ -4,7 +4,9 @@ import { notFound } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { UploadUnavailableState } from "@/components/shared/upload-unavailable-state";
-import { getSignedObjectUrl, getUploadByPublicId, getUploadByPublicIdAny } from "@/lib/supabase/queries";
+import { getSignedObjectUrl, getUploadByPublicIdAny } from "@/lib/supabase/queries";
+import { createServerClient } from "@/lib/supabase/server";
+import { getRequestIpHash } from "@/lib/upload";
 import { getUploadUnavailableReason, isExpiredDate } from "@/lib/utils";
 
 type FilePageProps = {
@@ -25,27 +27,66 @@ export async function generateMetadata({ params }: FilePageProps): Promise<Metad
     };
   }
 
+  if (!upload.is_public) {
+    return {
+      title: "Privater Upload",
+      description: "Diese Datei ist privat und nur fuer den Besitzer verfuegbar.",
+      robots: { index: false, follow: false },
+    };
+  }
+
   return {
     title: upload.title ?? upload.original_name,
     description: `Geteilte Datei auf SHARINGKING: ${upload.original_name}`,
   };
 }
 
+async function canAccessUpload(upload: NonNullable<Awaited<ReturnType<typeof getUploadByPublicIdAny>>>) {
+  if (upload.is_public) {
+    return true;
+  }
+
+  const supabase = await createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (upload.owner_user_id) {
+    return user?.id === upload.owner_user_id;
+  }
+
+  if (!upload.owner_ip_hash) {
+    return false;
+  }
+
+  const requesterIpHash = await getRequestIpHash();
+  return requesterIpHash === upload.owner_ip_hash;
+}
+
 export default async function FilePage({ params }: FilePageProps) {
   const { id } = await params;
-  const upload = await getUploadByPublicId(id, "file");
+  const upload = await getUploadByPublicIdAny(id, "file");
 
   if (!upload) {
-    const existingUpload = await getUploadByPublicIdAny(id, "file");
+    notFound();
+  }
 
-    if (!existingUpload) {
-      notFound();
-    }
+  const unavailableState =
+    upload.status === "deleted"
+      ? "deleted"
+      : isExpiredDate(upload.expires_at)
+        ? "expired"
+        : null;
 
-    const state = getUploadUnavailableReason(
-      existingUpload.status === "deleted" ? "deleted" : isExpiredDate(existingUpload.expires_at) ? "expired" : "not-found",
-    );
+  if (unavailableState) {
+    const state = getUploadUnavailableReason(unavailableState);
+    return <UploadUnavailableState eyebrow={state.eyebrow} title={state.title} description={state.description} />;
+  }
 
+  const canAccess = await canAccessUpload(upload);
+
+  if (!canAccess) {
+    const state = getUploadUnavailableReason("private");
     return <UploadUnavailableState eyebrow={state.eyebrow} title={state.title} description={state.description} />;
   }
 

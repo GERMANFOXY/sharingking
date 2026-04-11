@@ -112,7 +112,7 @@ export function HeroUploadClient({ isAuthenticated }: HeroUploadClientProps) {
     setBatchError(null);
     setShareLinks([]);
 
-    const drafts = pendingItems.map((item) => toDraft(item, true));
+    const drafts = pendingItems.map((item) => toDraft(item, isAuthenticated));
     const prepared = await prepareUploadsAction(drafts);
 
     if (!prepared.ok) {
@@ -275,7 +275,7 @@ export function HeroUploadClient({ isAuthenticated }: HeroUploadClientProps) {
             <Badge variant="secondary">{pendingItems.length} bereit</Badge>
             <Badge variant="secondary">{formatBytes(totalBytes)}</Badge>
           </div>
-          <span>{isAuthenticated ? "Uploads werden standardmaessig mit Share-Link angelegt." : "Anonyme Uploads werden sofort oeffentlich freigegeben."}</span>
+          <span>{isAuthenticated ? "Uploads werden standardmaessig mit Share-Link angelegt." : "Anonyme Uploads sind privat und nur fuer den urspruenglichen Uploader abrufbar."}</span>
         </div>
 
         <div className="rounded-2xl border border-white/10 bg-black/20 p-4">

@@ -63,7 +63,7 @@ export function isExpiredDate(isoDate: string) {
   return new Date(isoDate).getTime() <= Date.now();
 }
 
-export function getUploadUnavailableReason(status: "not-found" | "expired" | "deleted") {
+export function getUploadUnavailableReason(status: "not-found" | "expired" | "deleted" | "private") {
   if (status === "expired") {
     return {
       eyebrow: "Abgelaufen",
@@ -77,6 +77,14 @@ export function getUploadUnavailableReason(status: "not-found" | "expired" | "de
       eyebrow: "Nicht mehr verfuegbar",
       title: "Dieser Upload wurde entfernt",
       description: "Die Datei wurde manuell geloescht und ist deshalb nicht mehr abrufbar.",
+    };
+  }
+
+  if (status === "private") {
+    return {
+      eyebrow: "Privat",
+      title: "Dieser Upload ist privat",
+      description: "Der Upload ist nur fuer den urspruenglichen Besitzer sichtbar.",
     };
   }
 
