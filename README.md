@@ -126,14 +126,18 @@ In der Supabase Edge Function:
 - `NEXT_REVALIDATE_SECRET`
 - `NEXT_REVALIDATE_URL`
 
-### 3. Vault-Secrets fuer den Cron-Job anlegen
+### 3. Secrets fuer den Cron-Job anlegen
 
-Lege in Supabase Vault diese Secrets an:
+Bevorzugt ueber Supabase Vault:
 
 - `cleanup_expired_uploads_url`
   Wert: `https://<project-ref>.supabase.co/functions/v1/cleanup-expired-uploads`
 - `cleanup_expired_uploads_token`
   Wert: derselbe Wert wie `CLEANUP_FUNCTION_TOKEN`
+
+Falls `vault` auf deinem Projekt nicht verfuegbar ist, nutze die Fallback-Migration
+[supabase/migrations/20260411_000003_cleanup_cron_fallback.sql](supabase/migrations/20260411_000003_cleanup_cron_fallback.sql)
+und setze die Werte per SQL ueber `app.set_runtime_secret(...)`.
 
 ### 4. Edge Function deployen
 
@@ -149,11 +153,17 @@ supabase functions serve cleanup-expired-uploads --env-file supabase/.env.local
 
 ### 5. pg_cron aktivieren und Cron-Job registrieren
 
-Die Migration [supabase/migrations/20260411_000002_cleanup_cron.sql](supabase/migrations/20260411_000002_cleanup_cron.sql) aktiviert:
+Die Migration [supabase/migrations/20260411_000002_cleanup_cron.sql](supabase/migrations/20260411_000002_cleanup_cron.sql) aktiviert den bevorzugten Vault-Pfad.
+
+Falls `vault` auf deinem Projekt nicht installiert werden kann, verwende stattdessen
+[supabase/migrations/20260411_000003_cleanup_cron_fallback.sql](supabase/migrations/20260411_000003_cleanup_cron_fallback.sql).
+
+Beide Varianten aktivieren:
 
 - `pg_cron`
 - `pg_net`
-- `vault`
+
+Die Vault-Variante nutzt zusaetzlich `vault`.
 
 Der eigentliche Job laeuft alle sechs Stunden:
 
