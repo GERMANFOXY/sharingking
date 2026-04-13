@@ -14,6 +14,8 @@ export async function SiteHeader() {
 
   let canSeeTeamButton = false;
   if (user) {
+    const hasAdminRole = user.app_metadata?.role === "admin";
+
     const [{ data: memberRow }, { data: ownerRow }] = await Promise.all([
       supabase
         .from("team_members")
@@ -29,7 +31,7 @@ export async function SiteHeader() {
         .maybeSingle(),
     ]);
 
-    canSeeTeamButton = Boolean(memberRow || ownerRow);
+      canSeeTeamButton = hasAdminRole || Boolean(memberRow || ownerRow);
   }
 
   return (
@@ -58,11 +60,11 @@ export async function SiteHeader() {
           {user ? (
             <>
               {canSeeTeamButton ? (
-                <Button asChild variant="ghost" size="sm" className="hidden md:inline-flex">
+                <Button asChild variant="ghost" size="sm" className="inline-flex">
                   <Link href="/team">👥 Team</Link>
                 </Button>
               ) : null}
-              <Button asChild variant="ghost" size="sm" className="hidden md:inline-flex">
+              <Button asChild variant="ghost" size="sm" className="inline-flex">
                 <Link href="/profile">⚙️ Profil</Link>
               </Button>
               <form action={signOutAction}>
