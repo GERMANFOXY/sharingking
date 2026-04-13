@@ -1,16 +1,47 @@
-'use client';
-
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
-import { cn } from '@/lib/utils';
+import { redirect } from 'next/navigation';
+
+import { createServerClient } from '@/lib/supabase/server';
 
 interface TeamLayoutProps {
   children: React.ReactNode;
+  params: {
+    teamId: string;
+  };
 }
 
-export default function TeamLayout({ children }: TeamLayoutProps) {
-  const params = useParams();
-  const teamId = params.teamId as string;
+export default async function TeamLayout({ children, params }: TeamLayoutProps) {
+  const supabase = await createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect('/login');
+  }
+
+  const teamId = params.teamId;
+
+  const [{ data: memberRow }, { data: ownerRow }] = await Promise.all([
+    supabase
+      .from('team_members')
+      .select('id')
+      .eq('team_id', teamId)
+      .eq('user_id', user.id)
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from('teams')
+      .select('id')
+      .eq('id', teamId)
+      .eq('owner_user_id', user.id)
+      .limit(1)
+      .maybeSingle(),
+  ]);
+
+  if (!memberRow && !ownerRow) {
+    redirect('/team');
+  }
 
   const navItems = [
     { href: `/team/${teamId}/dashboard`, label: 'Dashboard', icon: '📊' },
@@ -39,10 +70,7 @@ export default function TeamLayout({ children }: TeamLayoutProps) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={cn(
-                  'block px-4 py-3 rounded-lg font-medium transition-colors',
-                  'hover:bg-accent hover:text-accent-foreground',
-                )}
+                className="block rounded-lg px-4 py-3 font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
               >
                 <span className="mr-2">{item.icon}</span>
                 {item.label}

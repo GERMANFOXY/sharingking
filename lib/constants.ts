@@ -11,6 +11,8 @@ export const APP_LINKS = {
   githubUrl: "https://github.com/GERMANFOXY/sharingking",
 } as const;
 
+export const APP_VERSION = "13.04.26.03.40";
+
 export const APP_LIMITS = {
   anonymous: {
     maxFileSizeBytes: 50 * 1024 * 1024,

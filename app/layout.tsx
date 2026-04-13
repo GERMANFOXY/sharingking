@@ -5,7 +5,7 @@ import "@/app/globals.css";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { ThemeProvider } from "@/components/providers/theme-provider";
-import { APP_COPY, APP_LINKS } from "@/lib/constants";
+import { APP_COPY, APP_LINKS, APP_VERSION } from "@/lib/constants";
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
@@ -53,6 +53,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             <SiteHeader />
             <main>{children}</main>
             <SiteFooter />
+            <span className="pointer-events-none fixed bottom-3 left-3 z-50 select-none text-[10px] tracking-wide text-white/35">
+              v{APP_VERSION}
+            </span>
           </div>
         </ThemeProvider>
       </body>

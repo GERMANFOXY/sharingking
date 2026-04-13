@@ -12,6 +12,26 @@ export async function SiteHeader() {
     data: { user },
   } = await supabase.auth.getUser();
 
+  let canSeeTeamButton = false;
+  if (user) {
+    const [{ data: memberRow }, { data: ownerRow }] = await Promise.all([
+      supabase
+        .from("team_members")
+        .select("id")
+        .eq("user_id", user.id)
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from("teams")
+        .select("id")
+        .eq("owner_user_id", user.id)
+        .limit(1)
+        .maybeSingle(),
+    ]);
+
+    canSeeTeamButton = Boolean(memberRow || ownerRow);
+  }
+
   return (
     <header className="sticky top-0 z-40 border-b border-white/10 bg-background/70 backdrop-blur-xl">
       <div className="mx-auto flex h-28 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -37,9 +57,11 @@ export async function SiteHeader() {
           </Button>
           {user ? (
             <>
-              <Button asChild variant="ghost" size="sm" className="hidden md:inline-flex">
-                <Link href="/team">👥 Team</Link>
-              </Button>
+              {canSeeTeamButton ? (
+                <Button asChild variant="ghost" size="sm" className="hidden md:inline-flex">
+                  <Link href="/team">👥 Team</Link>
+                </Button>
+              ) : null}
               <form action={signOutAction}>
                 <Button type="submit" variant="ghost">Logout</Button>
               </form>
