@@ -53,6 +53,7 @@ export interface DashboardStats {
 
 // Team Management
 export async function createTeam(name: string): Promise<{ team: TeamData | null; error: string | null }> {
+  const admin = getAdminClient();
   const supabase = await getServerSupabase();
 
   const { data: user } = await supabase.auth.getUser();
@@ -60,7 +61,7 @@ export async function createTeam(name: string): Promise<{ team: TeamData | null;
     return { team: null, error: 'Nicht authentifiziert' };
   }
 
-  const { data: team, error } = await supabase
+  const { data: team, error } = await admin
     .from('teams')
     .insert([{ name, owner_user_id: user.user.id }])
     .select()
@@ -71,7 +72,7 @@ export async function createTeam(name: string): Promise<{ team: TeamData | null;
   }
 
   // Add owner as member; ignore duplicate membership if already present.
-  const { error: memberError } = await supabase.from('team_members').upsert([
+  const { error: memberError } = await admin.from('team_members').upsert([
     { team_id: team.id, user_id: user.user.id, role: 'owner' },
   ], { onConflict: 'team_id,user_id' });
 
@@ -83,6 +84,7 @@ export async function createTeam(name: string): Promise<{ team: TeamData | null;
 }
 
 export async function getTeams(): Promise<{ teams: TeamData[]; error: string | null }> {
+  const admin = getAdminClient();
   const supabase = await getServerSupabase();
 
   const { data: user } = await supabase.auth.getUser();
@@ -90,7 +92,7 @@ export async function getTeams(): Promise<{ teams: TeamData[]; error: string | n
     return { teams: [], error: 'Nicht authentifiziert' };
   }
 
-  const { data: ownedTeams, error: ownedError } = await supabase
+  const { data: ownedTeams, error: ownedError } = await admin
     .from('teams')
     .select('*')
     .eq('owner_user_id', user.user.id);
@@ -99,7 +101,7 @@ export async function getTeams(): Promise<{ teams: TeamData[]; error: string | n
     return { teams: [], error: ownedError.message || 'Teams konnten nicht geladen werden' };
   }
 
-  const { data: memberships, error: membershipError } = await supabase
+  const { data: memberships, error: membershipError } = await admin
     .from('team_members')
     .select('team_id')
     .eq('user_id', user.user.id);
@@ -112,7 +114,7 @@ export async function getTeams(): Promise<{ teams: TeamData[]; error: string | n
 
   let memberTeams: any[] = [];
   if (memberTeamIds.length > 0) {
-    const { data, error } = await supabase.from('teams').select('*').in('id', memberTeamIds);
+    const { data, error } = await admin.from('teams').select('*').in('id', memberTeamIds);
     if (error) {
       return { teams: [], error: error.message || 'Mitglieder-Teams konnten nicht geladen werden' };
     }
@@ -128,8 +130,8 @@ export async function getTeams(): Promise<{ teams: TeamData[]; error: string | n
 }
 
 export async function getTeamDetails(teamId: string) {
-  const supabase = await getServerSupabase();
-  const { data: team, error } = await supabase
+  const admin = getAdminClient();
+  const { data: team, error } = await admin
     .from('teams')
     .select('*')
     .eq('id', teamId)
@@ -141,9 +143,9 @@ export async function getTeamDetails(teamId: string) {
 
 // Team Members
 export async function getTeamMembers(teamId: string) {
-  const supabase = await getServerSupabase();
+  const admin = getAdminClient();
 
-  const { data: members, error } = await supabase
+  const { data: members, error } = await admin
     .from('team_members')
     .select('*')
     .eq('team_id', teamId);
@@ -152,7 +154,7 @@ export async function getTeamMembers(teamId: string) {
 
   const userIds = (members || []).map((m: any) => m.user_id).filter(Boolean);
   const { data: profiles } = userIds.length
-    ? await supabase.from('profiles').select('id, email, display_name').in('id', userIds)
+    ? await admin.from('profiles').select('id, email, display_name').in('id', userIds)
     : { data: [] as any[] };
 
   const profileMap = new Map<string, { email: string; display_name?: string | null }>();
@@ -243,6 +245,7 @@ export async function logOperation(
   auditData: any,
   durationMs: number,
 ) {
+  const admin = getAdminClient();
   const supabase = await getServerSupabase();
 
   const { data: user } = await supabase.auth.getUser();
@@ -252,7 +255,7 @@ export async function logOperation(
   const fixes = auditData.fixesApplied?.length || 0;
   const errors = auditData.entries?.filter((e: any) => e.status === 'error').length || 0;
 
-  const { data: log, error } = await supabase
+  const { data: log, error } = await admin
     .from('operation_logs')
     .insert([
       {
@@ -278,22 +281,22 @@ export async function logOperation(
 
 // Dashboard Stats
 export async function getDashboardStats(teamId: string): Promise<DashboardStats> {
-  const supabase = await getServerSupabase();
+  const admin = getAdminClient();
 
   // Get members count
-  const { count: memberCount } = await supabase
+  const { count: memberCount } = await admin
     .from('team_members')
     .select('*', { count: 'exact' })
     .eq('team_id', teamId);
 
   // Get uploads count
-  const { count: uploadCount } = await supabase
+  const { count: uploadCount } = await admin
     .from('uploads')
     .select('*', { count: 'exact' })
     .eq('team_id', teamId);
 
   // Get success rate from operation logs
-  const { data: logs } = await supabase
+  const { data: logs } = await admin
     .from('operation_logs')
     .select('status')
     .eq('team_id', teamId)
@@ -303,7 +306,7 @@ export async function getDashboardStats(teamId: string): Promise<DashboardStats>
   const successRate = logs && logs.length > 0 ? Math.round((successCount / logs.length) * 100) : 0;
 
   // Get top issues
-  const { data: allLogs } = await supabase
+  const { data: allLogs } = await admin
     .from('operation_logs')
     .select('operation, findings_count')
     .eq('team_id', teamId)
@@ -321,7 +324,7 @@ export async function getDashboardStats(teamId: string): Promise<DashboardStats>
     .slice(0, 5);
 
   // Get recent operations
-  const { data: recentOps } = await supabase
+  const { data: recentOps } = await admin
     .from('operation_logs')
     .select('*')
     .eq('team_id', teamId)
@@ -341,9 +344,9 @@ export async function getDashboardStats(teamId: string): Promise<DashboardStats>
 
 // Get operation history
 export async function getOperationHistory(teamId: string, limit = 50) {
-  const supabase = await getServerSupabase();
+  const admin = getAdminClient();
 
-  const { data: logs, error } = await supabase
+  const { data: logs, error } = await admin
     .from('operation_logs')
     .select('*')
     .eq('team_id', teamId)
