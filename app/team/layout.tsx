@@ -16,12 +16,14 @@ export default async function TeamRootLayout({ children }: TeamRootLayoutProps) 
     redirect('/login');
   }
 
+  const hasAdminRole = user.app_metadata?.role === 'admin';
+
   const [{ data: memberRow }, { data: ownerRow }] = await Promise.all([
     supabase.from('team_members').select('id').eq('user_id', user.id).limit(1).maybeSingle(),
     supabase.from('teams').select('id').eq('owner_user_id', user.id).limit(1).maybeSingle(),
   ]);
 
-  if (!memberRow && !ownerRow) {
+  if (!hasAdminRole && !memberRow && !ownerRow) {
     redirect('/');
   }
 

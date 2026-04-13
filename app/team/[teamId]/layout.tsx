@@ -20,6 +20,7 @@ export default async function TeamLayout({ children, params }: TeamLayoutProps) 
     redirect('/login');
   }
 
+  const hasAdminRole = user.app_metadata?.role === 'admin';
   const { teamId } = await params;
 
   const [{ data: memberRow }, { data: ownerRow }] = await Promise.all([
@@ -39,7 +40,7 @@ export default async function TeamLayout({ children, params }: TeamLayoutProps) 
       .maybeSingle(),
   ]);
 
-  if (!memberRow && !ownerRow) {
+  if (!hasAdminRole && !memberRow && !ownerRow) {
     redirect('/team');
   }
 
