@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Check, Pencil, Shield, ShieldCheck, Trash2, UserMinus, UserPlus, X } from 'lucide-react';
 import {
@@ -74,10 +74,6 @@ export default function MembersPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  useEffect(() => {
-    loadAll();
-  }, [teamId]);
-
   function flash(msg: string, isError = false) {
     if (isError) {
       setError(msg);
@@ -92,7 +88,7 @@ export default function MembersPage() {
     }, 4000);
   }
 
-  async function loadRegularUsers() {
+  const loadRegularUsers = useCallback(async () => {
     setRegularLoading(true);
     try {
       const users = await listRegularUsers(teamId, userSearch);
@@ -102,9 +98,9 @@ export default function MembersPage() {
     } finally {
       setRegularLoading(false);
     }
-  }
+  }, [teamId, userSearch]);
 
-  async function loadAll() {
+  const loadAll = useCallback(async () => {
     setLoading(true);
     try {
       const [details, data] = await Promise.all([getTeamDetails(teamId), getTeamMembers(teamId)]);
@@ -116,7 +112,11 @@ export default function MembersPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [teamId, loadRegularUsers]);
+
+  useEffect(() => {
+    void loadAll();
+  }, [loadAll]);
 
   async function handleAddMember(e: React.FormEvent) {
     e.preventDefault();
@@ -190,7 +190,7 @@ export default function MembersPage() {
     try {
       await addRegularUserToTeam(teamId, userId, role);
       flash(role === 'admin' ? 'Nutzer als Admin hinzugefuegt' : 'Nutzer als Mitglied hinzugefuegt');
-      await Promise.all([loadAll(), loadRegularUsers()]);
+      await loadAll();
     } catch (e) {
       flash(e instanceof Error ? e.message : 'Nutzer konnte nicht hinzugefuegt werden', true);
     } finally {
