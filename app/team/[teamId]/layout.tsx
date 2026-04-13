@@ -5,9 +5,9 @@ import { createServerClient } from '@/lib/supabase/server';
 
 interface TeamLayoutProps {
   children: React.ReactNode;
-  params: {
+  params: Promise<{
     teamId: string;
-  };
+  }>;
 }
 
 export default async function TeamLayout({ children, params }: TeamLayoutProps) {
@@ -20,7 +20,7 @@ export default async function TeamLayout({ children, params }: TeamLayoutProps) 
     redirect('/login');
   }
 
-  const teamId = params.teamId;
+  const { teamId } = await params;
 
   const [{ data: memberRow }, { data: ownerRow }] = await Promise.all([
     supabase
