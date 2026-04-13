@@ -51,6 +51,12 @@ export interface DashboardStats {
   recentOperations: OperationLog[];
 }
 
+export interface RegularUserOption {
+  id: string;
+  email: string;
+  display_name?: string | null;
+}
+
 // Team Management
 export async function createTeam(name: string): Promise<{ team: TeamData | null; error: string | null }> {
   const admin = getAdminClient();
@@ -455,5 +461,122 @@ export async function deleteTeam(teamId: string) {
     .eq('id', teamId);
 
   if (error) throw new Error(error.message || 'Team konnte nicht gelöscht werden');
+}
+
+// List regular users who are not yet members of this team (owner/admin only)
+export async function listRegularUsers(teamId: string, search = ''): Promise<RegularUserOption[]> {
+  const admin = getAdminClient();
+  const supabase = await getServerSupabase();
+
+  const { data: authData } = await supabase.auth.getUser();
+  const callerId = authData?.user?.id;
+  if (!callerId) throw new Error('Nicht authentifiziert');
+
+  const { data: team } = await admin
+    .from('teams')
+    .select('owner_user_id')
+    .eq('id', teamId)
+    .single();
+
+  const { data: callerMembership } = await admin
+    .from('team_members')
+    .select('role')
+    .eq('team_id', teamId)
+    .eq('user_id', callerId)
+    .maybeSingle();
+
+  const isOwner = team?.owner_user_id === callerId;
+  const isAdmin = callerMembership?.role === 'admin';
+  if (!isOwner && !isAdmin) {
+    throw new Error('Keine Berechtigung für Nutzerverwaltung');
+  }
+
+  const { data: members, error: memberError } = await admin
+    .from('team_members')
+    .select('user_id')
+    .eq('team_id', teamId);
+
+  if (memberError) throw new Error(memberError.message || 'Mitglieder konnten nicht geladen werden');
+
+  const memberIds = new Set((members || []).map((m: any) => m.user_id));
+
+  const { data: usersResponse, error: usersError } = await admin.auth.admin.listUsers({
+    page: 1,
+    perPage: 200,
+  });
+
+  if (usersError) throw new Error(usersError.message || 'Nutzer konnten nicht geladen werden');
+
+  const normalizedSearch = search.trim().toLowerCase();
+  const filtered = (usersResponse?.users || [])
+    .filter((u: any) => Boolean(u?.id) && Boolean(u?.email))
+    .filter((u: any) => !memberIds.has(u.id))
+    .filter((u: any) => {
+      if (!normalizedSearch) return true;
+      const email = String(u.email || '').toLowerCase();
+      const fullName = String(u.user_metadata?.full_name || u.user_metadata?.name || '').toLowerCase();
+      return email.includes(normalizedSearch) || fullName.includes(normalizedSearch);
+    })
+    .slice(0, 50);
+
+  const ids = filtered.map((u: any) => u.id);
+  const { data: profiles } = ids.length
+    ? await admin.from('profiles').select('id, display_name').in('id', ids)
+    : { data: [] as any[] };
+
+  const profileMap = new Map<string, string | null>();
+  for (const p of profiles || []) {
+    profileMap.set((p as any).id, (p as any).display_name ?? null);
+  }
+
+  return filtered.map((u: any) => ({
+    id: u.id,
+    email: u.email,
+    display_name: profileMap.get(u.id) ?? u.user_metadata?.full_name ?? u.user_metadata?.name ?? null,
+  }));
+}
+
+// Add a regular user to the team by user ID (owner/admin only)
+export async function addRegularUserToTeam(teamId: string, userId: string, role: 'member' | 'admin' = 'member') {
+  const admin = getAdminClient();
+  const supabase = await getServerSupabase();
+
+  const { data: authData } = await supabase.auth.getUser();
+  const callerId = authData?.user?.id;
+  if (!callerId) throw new Error('Nicht authentifiziert');
+
+  const { data: team } = await admin
+    .from('teams')
+    .select('owner_user_id')
+    .eq('id', teamId)
+    .single();
+
+  const { data: callerMembership } = await admin
+    .from('team_members')
+    .select('role')
+    .eq('team_id', teamId)
+    .eq('user_id', callerId)
+    .maybeSingle();
+
+  const isOwner = team?.owner_user_id === callerId;
+  const isAdmin = callerMembership?.role === 'admin';
+  if (!isOwner && !isAdmin) {
+    throw new Error('Keine Berechtigung für Nutzerverwaltung');
+  }
+
+  const { data: existing } = await admin
+    .from('team_members')
+    .select('id')
+    .eq('team_id', teamId)
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (existing) throw new Error('Nutzer ist bereits Mitglied');
+
+  const { error } = await admin
+    .from('team_members')
+    .insert([{ team_id: teamId, user_id: userId, role }]);
+
+  if (error) throw new Error(error.message || 'Nutzer konnte nicht hinzugefügt werden');
 }
 

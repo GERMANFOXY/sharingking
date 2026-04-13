@@ -25,6 +25,9 @@ interface TeamMember {
     changeTeamMemberRole,
     renameTeam,
     deleteTeam,
+    listRegularUsers,
+    addRegularUserToTeam,
+    type RegularUserOption,
   } from '@/app/actions/team-actions';
   import { Badge } from '@/components/ui/badge';
   import { Button } from '@/components/ui/button';
@@ -68,6 +71,12 @@ interface TeamMember {
     const [email, setEmail] = useState('');
     const [adding, setAdding] = useState(false);
 
+    // Regular users
+    const [regularUsers, setRegularUsers] = useState<RegularUserOption[]>([]);
+    const [userSearch, setUserSearch] = useState('');
+    const [regularLoading, setRegularLoading] = useState(false);
+    const [addingRegularId, setAddingRegularId] = useState<string | null>(null);
+
     // Rename team
     const [renaming, setRenaming] = useState(false);
     const [renameValue, setRenameValue] = useState('');
@@ -98,10 +107,23 @@ interface TeamMember {
         ]);
         setTeamName(details.name);
         setMembers(data || []);
+        await loadRegularUsers();
       } catch {
         setError('Daten konnten nicht geladen werden');
       } finally {
         setLoading(false);
+      }
+    }
+
+    async function loadRegularUsers() {
+      setRegularLoading(true);
+      try {
+        const users = await listRegularUsers(teamId, userSearch);
+        setRegularUsers(users);
+      } catch (e) {
+        flash(e instanceof Error ? e.message : 'Reguläre Nutzer konnten nicht geladen werden', true);
+      } finally {
+        setRegularLoading(false);
       }
     }
 
@@ -175,6 +197,19 @@ interface TeamMember {
         flash(e instanceof Error ? e.message : 'Fehler beim Löschen', true);
         setDeleteBusy(false);
         setConfirmDelete(false);
+      }
+    }
+
+    async function handleAddRegularUser(userId: string, role: 'member' | 'admin') {
+      setAddingRegularId(`${userId}:${role}`);
+      try {
+        await addRegularUserToTeam(teamId, userId, role);
+        flash(role === 'admin' ? 'Nutzer als Admin hinzugefügt' : 'Nutzer als Mitglied hinzugefügt');
+        await Promise.all([loadAll(), loadRegularUsers()]);
+      } catch (e) {
+        flash(e instanceof Error ? e.message : 'Nutzer konnte nicht hinzugefügt werden', true);
+      } finally {
+        setAddingRegularId(null);
       }
     }
 
@@ -261,6 +296,78 @@ interface TeamMember {
                 {adding ? 'Wird hinzugefügt…' : 'Hinzufügen'}
               </Button>
             </form>
+          </CardContent>
+        </Card>
+
+        {/* Regular Users */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5" />
+              Reguläre Nutzer verwalten
+            </CardTitle>
+            <CardDescription>
+              Registrierte Nutzer, die noch nicht im Team sind. Du kannst sie direkt als Mitglied oder Admin hinzufügen.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                await loadRegularUsers();
+              }}
+              className="flex gap-2"
+            >
+              <Input
+                value={userSearch}
+                onChange={(e) => setUserSearch(e.target.value)}
+                placeholder="Suche nach E-Mail oder Name"
+                className="max-w-sm"
+              />
+              <Button type="submit" variant="secondary" disabled={regularLoading}>
+                {regularLoading ? 'Suche…' : 'Suchen'}
+              </Button>
+            </form>
+
+            {regularLoading ? (
+              <div className="text-sm text-muted-foreground">Nutzer werden geladen…</div>
+            ) : regularUsers.length === 0 ? (
+              <div className="text-sm text-muted-foreground">Keine passenden regulären Nutzer gefunden.</div>
+            ) : (
+              <div className="space-y-2">
+                {regularUsers.map((u) => (
+                  <div
+                    key={u.id}
+                    className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-black/10 px-3 py-2"
+                  >
+                    <div className="min-w-0">
+                      <div className="truncate font-medium text-white">{u.email}</div>
+                      {u.display_name ? (
+                        <div className="truncate text-xs text-muted-foreground">{u.display_name}</div>
+                      ) : null}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={addingRegularId !== null}
+                        onClick={() => handleAddRegularUser(u.id, 'member')}
+                      >
+                        {addingRegularId === `${u.id}:member` ? '…' : 'Als Mitglied'}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        disabled={addingRegularId !== null}
+                        onClick={() => handleAddRegularUser(u.id, 'admin')}
+                      >
+                        {addingRegularId === `${u.id}:admin` ? '…' : 'Als Admin'}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
