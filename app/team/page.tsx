@@ -28,7 +28,12 @@ export default function TeamPage() {
 
   async function loadTeams() {
     try {
-      const data = await getTeams();
+      const { teams: data, error: loadError } = await getTeams();
+      if (loadError) {
+        setError(loadError);
+        setTeams([]);
+        return;
+      }
       setTeams(data || []);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Fehler beim Laden der Teams';
@@ -51,7 +56,12 @@ export default function TeamPage() {
     setError('');
 
     try {
-      const newTeam = await createTeam(teamName);
+      const { team: newTeam, error: createError } = await createTeam(teamName);
+      if (createError || !newTeam) {
+        setError(createError || 'Fehler beim Erstellen des Teams');
+        setCreating(false);
+        return;
+      }
       setTeamName('');
       router.push(`/team/${newTeam.id}/dashboard`);
     } catch (error) {

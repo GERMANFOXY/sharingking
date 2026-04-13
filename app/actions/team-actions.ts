@@ -52,11 +52,13 @@ export interface DashboardStats {
 }
 
 // Team Management
-export async function createTeam(name: string) {
+export async function createTeam(name: string): Promise<{ team: TeamData | null; error: string | null }> {
   const supabase = await getServerSupabase();
 
   const { data: user } = await supabase.auth.getUser();
-  if (!user?.user?.id) throw new Error('Not authenticated');
+  if (!user?.user?.id) {
+    return { team: null, error: 'Nicht authentifiziert' };
+  }
 
   const { data: team, error } = await supabase
     .from('teams')
@@ -64,7 +66,9 @@ export async function createTeam(name: string) {
     .select()
     .single();
 
-  if (error) throw new Error(error.message || 'Team konnte nicht erstellt werden');
+  if (error) {
+    return { team: null, error: error.message || 'Team konnte nicht erstellt werden' };
+  }
 
   // Add owner as member; ignore duplicate membership if already present.
   const { error: memberError } = await supabase.from('team_members').upsert([
@@ -72,38 +76,46 @@ export async function createTeam(name: string) {
   ], { onConflict: 'team_id,user_id' });
 
   if (memberError) {
-    throw new Error(memberError.message || 'Team erstellt, aber Owner-Mitglied konnte nicht gesetzt werden');
+    return { team: null, error: memberError.message || 'Team erstellt, aber Owner-Mitglied konnte nicht gesetzt werden' };
   }
 
-  return team as TeamData;
+  return { team: team as TeamData, error: null };
 }
 
-export async function getTeams() {
+export async function getTeams(): Promise<{ teams: TeamData[]; error: string | null }> {
   const supabase = await getServerSupabase();
 
   const { data: user } = await supabase.auth.getUser();
-  if (!user?.user?.id) throw new Error('Not authenticated');
+  if (!user?.user?.id) {
+    return { teams: [], error: 'Nicht authentifiziert' };
+  }
 
   const { data: ownedTeams, error: ownedError } = await supabase
     .from('teams')
     .select('*')
     .eq('owner_user_id', user.user.id);
 
-  if (ownedError) throw new Error(ownedError.message || 'Teams konnten nicht geladen werden');
+  if (ownedError) {
+    return { teams: [], error: ownedError.message || 'Teams konnten nicht geladen werden' };
+  }
 
   const { data: memberships, error: membershipError } = await supabase
     .from('team_members')
     .select('team_id')
     .eq('user_id', user.user.id);
 
-  if (membershipError) throw new Error(membershipError.message || 'Team-Mitgliedschaften konnten nicht geladen werden');
+  if (membershipError) {
+    return { teams: [], error: membershipError.message || 'Team-Mitgliedschaften konnten nicht geladen werden' };
+  }
 
   const memberTeamIds = Array.from(new Set((memberships || []).map((m: any) => m.team_id)));
 
   let memberTeams: any[] = [];
   if (memberTeamIds.length > 0) {
     const { data, error } = await supabase.from('teams').select('*').in('id', memberTeamIds);
-    if (error) throw new Error(error.message || 'Mitglieder-Teams konnten nicht geladen werden');
+    if (error) {
+      return { teams: [], error: error.message || 'Mitglieder-Teams konnten nicht geladen werden' };
+    }
     memberTeams = data || [];
   }
 
@@ -112,7 +124,7 @@ export async function getTeams() {
     teamMap.set(team.id, team as TeamData);
   }
 
-  return Array.from(teamMap.values());
+  return { teams: Array.from(teamMap.values()), error: null };
 }
 
 export async function getTeamDetails(teamId: string) {
