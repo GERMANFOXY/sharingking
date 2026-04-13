@@ -53,71 +53,113 @@ export interface DashboardStats {
 
 // Team Management
 export async function createTeam(name: string) {
-  const admin = getAdminClient();
   const supabase = await getServerSupabase();
 
   const { data: user } = await supabase.auth.getUser();
   if (!user?.user?.id) throw new Error('Not authenticated');
 
-  const { data: team, error } = await admin
+  const { data: team, error } = await supabase
     .from('teams')
     .insert([{ name, owner_user_id: user.user.id }])
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) throw new Error(error.message || 'Team konnte nicht erstellt werden');
 
-  // Add owner as member
-  await admin.from('team_members').insert([
+  // Add owner as member; ignore duplicate membership if already present.
+  const { error: memberError } = await supabase.from('team_members').upsert([
     { team_id: team.id, user_id: user.user.id, role: 'owner' },
-  ]);
+  ], { onConflict: 'team_id,user_id' });
+
+  if (memberError) {
+    throw new Error(memberError.message || 'Team erstellt, aber Owner-Mitglied konnte nicht gesetzt werden');
+  }
 
   return team as TeamData;
 }
 
 export async function getTeams() {
-  const admin = getAdminClient();
   const supabase = await getServerSupabase();
 
   const { data: user } = await supabase.auth.getUser();
   if (!user?.user?.id) throw new Error('Not authenticated');
 
-  const { data: teams, error } = await admin
+  const { data: ownedTeams, error: ownedError } = await supabase
     .from('teams')
     .select('*')
-    .or(
-      `owner_user_id.eq.${user.user.id},team_members(user_id).eq.${user.user.id}`,
-    );
+    .eq('owner_user_id', user.user.id);
 
-  if (error) throw error;
-  return teams as TeamData[];
+  if (ownedError) throw new Error(ownedError.message || 'Teams konnten nicht geladen werden');
+
+  const { data: memberships, error: membershipError } = await supabase
+    .from('team_members')
+    .select('team_id')
+    .eq('user_id', user.user.id);
+
+  if (membershipError) throw new Error(membershipError.message || 'Team-Mitgliedschaften konnten nicht geladen werden');
+
+  const memberTeamIds = Array.from(new Set((memberships || []).map((m: any) => m.team_id)));
+
+  let memberTeams: any[] = [];
+  if (memberTeamIds.length > 0) {
+    const { data, error } = await supabase.from('teams').select('*').in('id', memberTeamIds);
+    if (error) throw new Error(error.message || 'Mitglieder-Teams konnten nicht geladen werden');
+    memberTeams = data || [];
+  }
+
+  const teamMap = new Map<string, TeamData>();
+  for (const team of [...(ownedTeams || []), ...memberTeams]) {
+    teamMap.set(team.id, team as TeamData);
+  }
+
+  return Array.from(teamMap.values());
 }
 
 export async function getTeamDetails(teamId: string) {
-  const admin = getAdminClient();
-  const { data: team, error } = await admin
+  const supabase = await getServerSupabase();
+  const { data: team, error } = await supabase
     .from('teams')
     .select('*')
     .eq('id', teamId)
     .single();
 
-  if (error) throw error;
+  if (error) throw new Error(error.message || 'Team konnte nicht geladen werden');
   return team as TeamData;
 }
 
 // Team Members
 export async function getTeamMembers(teamId: string) {
-  const admin = getAdminClient();
+  const supabase = await getServerSupabase();
 
-  // Get team members with user info
-  const { data: members, error } = await admin
+  const { data: members, error } = await supabase
     .from('team_members')
-    .select('*, auth.users(id, email, user_metadata)')
+    .select('*')
     .eq('team_id', teamId);
 
-  if (error) throw error;
+  if (error) throw new Error(error.message || 'Mitglieder konnten nicht geladen werden');
 
-  return members as unknown as TeamMember[];
+  const userIds = (members || []).map((m: any) => m.user_id).filter(Boolean);
+  const { data: profiles } = userIds.length
+    ? await supabase.from('profiles').select('id, email, display_name').in('id', userIds)
+    : { data: [] as any[] };
+
+  const profileMap = new Map<string, { email: string; display_name?: string | null }>();
+  for (const profile of profiles || []) {
+    profileMap.set((profile as any).id, {
+      email: (profile as any).email,
+      display_name: (profile as any).display_name,
+    });
+  }
+
+  return (members || []).map((member: any) => ({
+    ...member,
+    user: {
+      email: profileMap.get(member.user_id)?.email || '',
+      user_metadata: {
+        full_name: profileMap.get(member.user_id)?.display_name || undefined,
+      },
+    },
+  })) as TeamMember[];
 }
 
 export async function addTeamMember(teamId: string, userEmail: string) {
@@ -189,7 +231,6 @@ export async function logOperation(
   auditData: any,
   durationMs: number,
 ) {
-  const admin = getAdminClient();
   const supabase = await getServerSupabase();
 
   const { data: user } = await supabase.auth.getUser();
@@ -199,7 +240,7 @@ export async function logOperation(
   const fixes = auditData.fixesApplied?.length || 0;
   const errors = auditData.entries?.filter((e: any) => e.status === 'error').length || 0;
 
-  const { data: log, error } = await admin
+  const { data: log, error } = await supabase
     .from('operation_logs')
     .insert([
       {
@@ -219,28 +260,28 @@ export async function logOperation(
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) throw new Error(error.message || 'Operation konnte nicht geloggt werden');
   return log as OperationLog;
 }
 
 // Dashboard Stats
 export async function getDashboardStats(teamId: string): Promise<DashboardStats> {
-  const admin = getAdminClient();
+  const supabase = await getServerSupabase();
 
   // Get members count
-  const { count: memberCount } = await admin
+  const { count: memberCount } = await supabase
     .from('team_members')
     .select('*', { count: 'exact' })
     .eq('team_id', teamId);
 
   // Get uploads count
-  const { count: uploadCount } = await admin
+  const { count: uploadCount } = await supabase
     .from('uploads')
     .select('*', { count: 'exact' })
     .eq('team_id', teamId);
 
   // Get success rate from operation logs
-  const { data: logs } = await admin
+  const { data: logs } = await supabase
     .from('operation_logs')
     .select('status')
     .eq('team_id', teamId)
@@ -250,7 +291,7 @@ export async function getDashboardStats(teamId: string): Promise<DashboardStats>
   const successRate = logs && logs.length > 0 ? Math.round((successCount / logs.length) * 100) : 0;
 
   // Get top issues
-  const { data: allLogs } = await admin
+  const { data: allLogs } = await supabase
     .from('operation_logs')
     .select('operation, findings_count')
     .eq('team_id', teamId)
@@ -268,17 +309,14 @@ export async function getDashboardStats(teamId: string): Promise<DashboardStats>
     .slice(0, 5);
 
   // Get recent operations
-  const { data: recentOps } = await admin
+  const { data: recentOps } = await supabase
     .from('operation_logs')
-    .select('*, auth.users(email)')
+    .select('*')
     .eq('team_id', teamId)
     .order('created_at', { ascending: false })
     .limit(10);
 
-  const recentOperations = (recentOps || []).map((op: any) => ({
-    ...op,
-    performed_by_email: op.auth?.users?.email,
-  }));
+  const recentOperations = (recentOps || []).map((op: any) => ({ ...op }));
 
   return {
     totalMembers: memberCount || 0,
@@ -291,19 +329,16 @@ export async function getDashboardStats(teamId: string): Promise<DashboardStats>
 
 // Get operation history
 export async function getOperationHistory(teamId: string, limit = 50) {
-  const admin = getAdminClient();
+  const supabase = await getServerSupabase();
 
-  const { data: logs, error } = await admin
+  const { data: logs, error } = await supabase
     .from('operation_logs')
-    .select('*, auth.users(email)')
+    .select('*')
     .eq('team_id', teamId)
     .order('created_at', { ascending: false })
     .limit(limit);
 
-  if (error) throw error;
+  if (error) throw new Error(error.message || 'Operationen konnten nicht geladen werden');
 
-  return (logs || []).map((op: any) => ({
-    ...op,
-    performed_by_email: op.auth?.users?.email,
-  })) as OperationLog[];
+  return (logs || []).map((op: any) => ({ ...op })) as OperationLog[];
 }
