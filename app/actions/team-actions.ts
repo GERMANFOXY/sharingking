@@ -357,3 +357,103 @@ export async function getOperationHistory(teamId: string, limit = 50) {
 
   return (logs || []).map((op: any) => ({ ...op })) as OperationLog[];
 }
+
+// Change role of a team member (owner only; cannot change own role or other owners)
+export async function changeTeamMemberRole(teamId: string, memberId: string, newRole: 'member' | 'admin') {
+  const admin = getAdminClient();
+  const supabase = await getServerSupabase();
+
+  const { data: authData } = await supabase.auth.getUser();
+  const callerId = authData?.user?.id;
+  if (!callerId) throw new Error('Nicht authentifiziert');
+
+  const { data: team } = await admin
+    .from('teams')
+    .select('owner_user_id')
+    .eq('id', teamId)
+    .single();
+
+  if (team?.owner_user_id !== callerId) {
+    throw new Error('Nur der Owner kann Rollen ändern');
+  }
+
+  // Prevent changing roles of owner members
+  const { data: target } = await admin
+    .from('team_members')
+    .select('user_id, role')
+    .eq('id', memberId)
+    .eq('team_id', teamId)
+    .single();
+
+  if (!target) throw new Error('Mitglied nicht gefunden');
+  if (target.role === 'owner' || target.user_id === callerId) {
+    throw new Error('Owner-Rolle kann nicht geändert werden');
+  }
+
+  const { error } = await admin
+    .from('team_members')
+    .update({ role: newRole })
+    .eq('id', memberId)
+    .eq('team_id', teamId);
+
+  if (error) throw new Error(error.message || 'Rolle konnte nicht geändert werden');
+}
+
+// Rename a team (owner only)
+export async function renameTeam(teamId: string, newName: string) {
+  const admin = getAdminClient();
+  const supabase = await getServerSupabase();
+
+  const { data: authData } = await supabase.auth.getUser();
+  const callerId = authData?.user?.id;
+  if (!callerId) throw new Error('Nicht authentifiziert');
+
+  const trimmed = newName.trim();
+  if (!trimmed) throw new Error('Team-Name darf nicht leer sein');
+  if (trimmed.length > 80) throw new Error('Name darf maximal 80 Zeichen enthalten');
+
+  const { data: team } = await admin
+    .from('teams')
+    .select('owner_user_id')
+    .eq('id', teamId)
+    .single();
+
+  if (team?.owner_user_id !== callerId) {
+    throw new Error('Nur der Owner kann das Team umbenennen');
+  }
+
+  const { error } = await admin
+    .from('teams')
+    .update({ name: trimmed, updated_at: new Date().toISOString() })
+    .eq('id', teamId);
+
+  if (error) throw new Error(error.message || 'Team konnte nicht umbenannt werden');
+}
+
+// Delete an entire team (owner only)
+export async function deleteTeam(teamId: string) {
+  const admin = getAdminClient();
+  const supabase = await getServerSupabase();
+
+  const { data: authData } = await supabase.auth.getUser();
+  const callerId = authData?.user?.id;
+  if (!callerId) throw new Error('Nicht authentifiziert');
+
+  const { data: team } = await admin
+    .from('teams')
+    .select('owner_user_id')
+    .eq('id', teamId)
+    .single();
+
+  if (team?.owner_user_id !== callerId) {
+    throw new Error('Nur der Owner kann das Team löschen');
+  }
+
+  const { error } = await admin
+    .from('teams')
+    .delete()
+    .eq('id', teamId);
+
+  if (error) throw new Error(error.message || 'Team konnte nicht gelöscht werden');
+}
+

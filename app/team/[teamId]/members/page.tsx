@@ -12,174 +12,394 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 interface TeamMember {
-  id: string;
-  team_id: string;
-  user_id: string;
-  role: string;
-  joined_at: string;
-  user?: {
-    email: string;
-    user_metadata?: { full_name?: string };
+  'use client';
+
+  import { useEffect, useState } from 'react';
+  import { useParams, useRouter } from 'next/navigation';
+  import { Check, Pencil, Shield, ShieldCheck, Trash2, UserMinus, UserPlus, X } from 'lucide-react';
+  import {
+    getTeamDetails,
+    getTeamMembers,
+    addTeamMember,
+    removeTeamMember,
+    changeTeamMemberRole,
+    renameTeam,
+    deleteTeam,
+  } from '@/app/actions/team-actions';
+  import { Badge } from '@/components/ui/badge';
+  import { Button } from '@/components/ui/button';
+  import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+  import { Input } from '@/components/ui/input';
+
+  interface TeamMember {
+    id: string;
+    team_id: string;
+    user_id: string;
+    role: string;
+    joined_at: string;
+    user?: {
+      email: string;
+      user_metadata?: { full_name?: string };
+    };
+  }
+
+  const ROLE_LABELS: Record<string, string> = {
+    owner: 'Owner',
+    admin: 'Admin',
+    member: 'Mitglied',
   };
-}
 
-export default function MembersPage() {
-  const params = useParams();
-  const teamId = params.teamId as string;
-  const [members, setMembers] = useState<TeamMember[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [email, setEmail] = useState('');
-  const [adding, setAdding] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const ROLE_BADGE: Record<string, 'default' | 'secondary' | 'outline'> = {
+    owner: 'default',
+    admin: 'secondary',
+    member: 'outline',
+  };
 
-  useEffect(() => {
-    loadMembers();
-  }, [teamId]);
+  export default function MembersPage() {
+    const params = useParams();
+    const router = useRouter();
+    const teamId = params.teamId as string;
 
-  async function loadMembers() {
-    try {
-      const data = await getTeamMembers(teamId);
-      setMembers(data || []);
-    } catch (error) {
-      console.error('Failed to load members:', error);
-      setError('Mitglieder konnten nicht geladen werden');
-    } finally {
-      setLoading(false);
+    const [members, setMembers] = useState<TeamMember[]>([]);
+    const [teamName, setTeamName] = useState('');
+    const [loading, setLoading] = useState(true);
+
+    // Add member
+    const [email, setEmail] = useState('');
+    const [adding, setAdding] = useState(false);
+
+    // Rename team
+    const [renaming, setRenaming] = useState(false);
+    const [renameValue, setRenameValue] = useState('');
+    const [renameBusy, setRenameBusy] = useState(false);
+
+    // Row-level state
+    const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
+    const [roleChangingId, setRoleChangingId] = useState<string | null>(null);
+
+    // Delete team
+    const [confirmDelete, setConfirmDelete] = useState(false);
+    const [deleteBusy, setDeleteBusy] = useState(false);
+
+    // Feedback
+    const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
+
+    useEffect(() => {
+      loadAll();
+    }, [teamId]);
+
+    async function loadAll() {
+      setLoading(true);
+      try {
+        const [details, data] = await Promise.all([
+          getTeamDetails(teamId),
+          getTeamMembers(teamId),
+        ]);
+        setTeamName(details.name);
+        setMembers(data || []);
+      } catch {
+        setError('Daten konnten nicht geladen werden');
+      } finally {
+        setLoading(false);
+      }
     }
-  }
 
-  async function handleAddMember(e: React.FormEvent) {
-    e.preventDefault();
-    if (!email) return;
-
-    setAdding(true);
-    setError('');
-    setSuccess('');
-
-    try {
-      await addTeamMember(teamId, email);
-      setSuccess(`${email} wurde zum Team hinzugefügt`);
-      setEmail('');
-      await loadMembers();
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Fehler beim Hinzufügen');
-    } finally {
-      setAdding(false);
+    function flash(msg: string, isError = false) {
+      if (isError) { setError(msg); setSuccess(''); }
+      else { setSuccess(msg); setError(''); }
+      setTimeout(() => { setError(''); setSuccess(''); }, 4000);
     }
-  }
 
-  async function handleRemoveMember(memberId: string) {
-    if (!confirm('Dieses Mitglied wirklich entfernen?')) return;
-
-    try {
-      await removeTeamMember(teamId, memberId);
-      setSuccess('Mitglied entfernt');
-      await loadMembers();
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Fehler beim Entfernen');
+    async function handleAddMember(e: React.FormEvent) {
+      e.preventDefault();
+      if (!email) return;
+      setAdding(true);
+      try {
+        await addTeamMember(teamId, email);
+        flash(`${email} wurde hinzugefügt`);
+        setEmail('');
+        await loadAll();
+      } catch (e) {
+        flash(e instanceof Error ? e.message : 'Fehler beim Hinzufügen', true);
+      } finally {
+        setAdding(false);
+      }
     }
-  }
 
-  if (loading) {
-    return (
-      <div className="space-y-4 animate-pulse">
-        <div className="h-12 bg-muted rounded-lg" />
-        <div className="space-y-2">
-          {[...Array(5)].map((_, i) => (
+    async function handleRemoveMember(memberId: string, memberEmail: string) {
+      try {
+        await removeTeamMember(teamId, memberId);
+        flash(`${memberEmail} wurde entfernt`);
+        setConfirmRemoveId(null);
+        await loadAll();
+      } catch (e) {
+        flash(e instanceof Error ? e.message : 'Fehler beim Entfernen', true);
+      }
+    }
+
+    async function handleChangeRole(memberId: string, newRole: 'member' | 'admin') {
+      setRoleChangingId(memberId);
+      try {
+        await changeTeamMemberRole(teamId, memberId, newRole);
+        flash('Rolle geändert');
+        await loadAll();
+      } catch (e) {
+        flash(e instanceof Error ? e.message : 'Fehler beim Rollenändern', true);
+      } finally {
+        setRoleChangingId(null);
+      }
+    }
+
+    async function handleRenameTeam(e: React.FormEvent) {
+      e.preventDefault();
+      setRenameBusy(true);
+      try {
+        await renameTeam(teamId, renameValue);
+        setTeamName(renameValue.trim());
+        setRenaming(false);
+        flash('Team umbenannt');
+      } catch (e) {
+        flash(e instanceof Error ? e.message : 'Fehler beim Umbenennen', true);
+      } finally {
+        setRenameBusy(false);
+      }
+    }
+
+    async function handleDeleteTeam() {
+      setDeleteBusy(true);
+      try {
+        await deleteTeam(teamId);
+        router.push('/team');
+      } catch (e) {
+        flash(e instanceof Error ? e.message : 'Fehler beim Löschen', true);
+        setDeleteBusy(false);
+        setConfirmDelete(false);
+      }
+    }
+
+    if (loading) {
+      return (
+        <div className="space-y-4 animate-pulse">
+          <div className="h-12 bg-muted rounded-lg" />
+          {[...Array(4)].map((_, i) => (
             <div key={i} className="h-12 bg-muted rounded-lg" />
           ))}
         </div>
+      );
+    }
+
+    return (
+      <div className="space-y-8">
+        {/* Header */}
+        <div className="flex items-start gap-4 flex-wrap">
+          <div className="flex-1 min-w-0">
+            {renaming ? (
+              <form onSubmit={handleRenameTeam} className="flex items-center gap-2">
+                <Input
+                  value={renameValue}
+                  onChange={e => setRenameValue(e.target.value)}
+                  maxLength={80}
+                  autoFocus
+                  className="h-10 w-64 text-xl font-bold"
+                />
+                <Button type="submit" size="sm" disabled={renameBusy || !renameValue.trim()}>
+                  <Check className="h-4 w-4" />
+                </Button>
+                <Button type="button" size="sm" variant="ghost" onClick={() => setRenaming(false)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </form>
+            ) : (
+              <div className="flex items-center gap-2">
+                <h1 className="text-3xl font-bold">{teamName}</h1>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => { setRenameValue(teamName); setRenaming(true); }}
+                  title="Team umbenennen"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+            <p className="text-muted-foreground mt-1">
+              Nutzer-Verwaltung · {members.length} Mitglied{members.length !== 1 ? 'er' : ''}
+            </p>
+          </div>
+        </div>
+
+        {/* Feedback */}
+        {error && (
+          <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">{error}</div>
+        )}
+        {success && (
+          <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-400">{success}</div>
+        )}
+
+        {/* Add Member */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5" />
+              Mitglied hinzufügen
+            </CardTitle>
+            <CardDescription>E-Mail-Adresse eines registrierten Nutzers</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleAddMember} className="flex gap-2">
+              <Input
+                type="email"
+                placeholder="nutzer@example.com"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                disabled={adding}
+                className="max-w-sm"
+              />
+              <Button type="submit" disabled={adding || !email}>
+                {adding ? 'Wird hinzugefügt…' : 'Hinzufügen'}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        {/* Members Table */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Mitglieder ({members.length})</CardTitle>
+            <CardDescription>Rollen, Beitrittsdatum und Aktionen pro Mitglied</CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            {members.length === 0 ? (
+              <p className="px-6 py-10 text-center text-muted-foreground">Noch keine Mitglieder</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-white/10 bg-white/5 text-left text-muted-foreground">
+                      <th className="px-6 py-3 font-medium">Nutzer</th>
+                      <th className="px-6 py-3 font-medium">Rolle</th>
+                      <th className="px-6 py-3 font-medium">Beigetreten</th>
+                      <th className="px-6 py-3 font-medium text-right">Aktionen</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/10">
+                    {members.map(member => (
+                      <tr key={member.id} className="bg-black/10 hover:bg-black/20 transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="font-medium text-white">{member.user?.email || '—'}</div>
+                          {member.user?.user_metadata?.full_name && (
+                            <div className="text-xs text-muted-foreground mt-0.5">
+                              {member.user.user_metadata.full_name}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4">
+                          <Badge variant={ROLE_BADGE[member.role] ?? 'outline'}>
+                            {member.role === 'owner' && <ShieldCheck className="mr-1 h-3 w-3" />}
+                            {member.role === 'admin' && <Shield className="mr-1 h-3 w-3" />}
+                            {ROLE_LABELS[member.role] ?? member.role}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-4 text-muted-foreground">
+                          {new Date(member.joined_at).toLocaleDateString('de-DE')}
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          {member.role !== 'owner' && (
+                            <div className="flex items-center justify-end gap-2 flex-wrap">
+                              {/* Role toggle */}
+                              {confirmRemoveId !== member.id && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  disabled={roleChangingId === member.id}
+                                  onClick={() =>
+                                    handleChangeRole(member.id, member.role === 'admin' ? 'member' : 'admin')
+                                  }
+                                  title={member.role === 'admin' ? 'Zu Mitglied herabstufen' : 'Zum Admin befördern'}
+                                >
+                                  {roleChangingId === member.id ? (
+                                    <span className="text-xs text-muted-foreground">…</span>
+                                  ) : member.role === 'admin' ? (
+                                    <><Shield className="mr-1.5 h-3.5 w-3.5" />Zu Mitglied</>
+                                  ) : (
+                                    <><ShieldCheck className="mr-1.5 h-3.5 w-3.5" />Zum Admin</>
+                                  )}
+                                </Button>
+                              )}
+                              {/* Inline confirm remove */}
+                              {confirmRemoveId === member.id ? (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-xs text-muted-foreground">Wirklich entfernen?</span>
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => handleRemoveMember(member.id, member.user?.email ?? '')}
+                                  >
+                                    Ja
+                                  </Button>
+                                  <Button variant="ghost" size="sm" onClick={() => setConfirmRemoveId(null)}>
+                                    Nein
+                                  </Button>
+                                </div>
+                              ) : (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setConfirmRemoveId(member.id)}
+                                >
+                                  <UserMinus className="mr-1.5 h-3.5 w-3.5" />
+                                  Entfernen
+                                </Button>
+                              )}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Danger Zone */}
+        <Card className="border-red-900/40 bg-red-950/10">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-400">
+              <Trash2 className="h-5 w-5" />
+              Danger Zone
+            </CardTitle>
+            <CardDescription>Aktionen, die nicht rückgängig gemacht werden können</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {confirmDelete ? (
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="text-sm text-red-300">
+                  Das Team und alle Mitgliedschaften werden gelöscht. Wirklich fortfahren?
+                </span>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={deleteBusy}
+                  onClick={handleDeleteTeam}
+                >
+                  {deleteBusy ? 'Wird gelöscht…' : 'Ja, Team löschen'}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(false)}>
+                  Abbrechen
+                </Button>
+              </div>
+            ) : (
+              <Button variant="destructive" size="sm" onClick={() => setConfirmDelete(true)}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                Team löschen
+              </Button>
+            )}
+          </CardContent>
+        </Card>
       </div>
     );
   }
-
-  return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold">Team-Mitglieder</h1>
-        <p className="text-muted-foreground">Verwalte dein Support Team</p>
-      </div>
-
-      {/* Add Member Form */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Mitglied hinzufügen</CardTitle>
-          <CardDescription>Email-Adresse eines neuen Team-Mitglieds</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleAddMember} className="flex gap-2">
-            <Input
-              type="email"
-              placeholder="member@example.com"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              disabled={adding}
-            />
-            <Button type="submit" disabled={adding || !email}>
-              {adding ? 'Wird hinzugefügt...' : 'Hinzufügen'}
-            </Button>
-          </form>
-          {error && <p className="text-sm text-red-500 mt-2">{error}</p>}
-          {success && <p className="text-sm text-green-600 mt-2">✅ {success}</p>}
-        </CardContent>
-      </Card>
-
-      {/* Members List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Mitglieder ({members.length})</CardTitle>
-          <CardDescription>Alle Team-Mitglieder und deren Rollen</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {members.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">Noch keine Mitglieder</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-medium">Email</th>
-                    <th className="text-left py-3 px-4 font-medium">Name</th>
-                    <th className="text-left py-3 px-4 font-medium">Rolle</th>
-                    <th className="text-left py-3 px-4 font-medium">Beigetreten</th>
-                    <th className="text-right py-3 px-4">Aktionen</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {members.map(member => (
-                    <tr key={member.id} className="border-b hover:bg-muted/50">
-                      <td className="py-3 px-4">{member.user?.email}</td>
-                      <td className="py-3 px-4">
-                        {member.user?.user_metadata?.full_name || '—'}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className="inline-block px-2 py-1 bg-accent rounded text-sm">
-                          {member.role}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-sm text-muted-foreground">
-                        {new Date(member.joined_at).toLocaleDateString('de-DE')}
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        {member.role !== 'owner' && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleRemoveMember(member.id)}
-                          >
-                            Entfernen
-                          </Button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
