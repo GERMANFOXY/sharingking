@@ -62,6 +62,9 @@ export async function SiteHeader() {
                   <Link href="/team">👥 Team</Link>
                 </Button>
               ) : null}
+              <Button asChild variant="ghost" size="sm" className="hidden md:inline-flex">
+                <Link href="/profile">⚙️ Profil</Link>
+              </Button>
               <form action={signOutAction}>
                 <Button type="submit" variant="ghost">Logout</Button>
               </form>
