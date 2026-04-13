@@ -49,7 +49,8 @@ export function UploadsTableShell({ uploads, nextLimit }: UploadsTableShellProps
                 uploads.map((upload) => (
                   <tr key={upload.id} className="bg-black/10 transition-colors hover:bg-black/20">
                     <td className="px-4 py-4 text-white">
-                      <div className="max-w-xs truncate">{upload.original_name}</div>
+                      <div className="max-w-xs truncate">{upload.title ?? upload.original_name}</div>
+                      {upload.title ? <div className="mt-0.5 max-w-xs truncate text-xs text-muted-foreground/60">{upload.original_name}</div> : null}
                     </td>
                     <td className="px-4 py-4 text-muted-foreground">{upload.kind === "image" ? "Bild" : "Datei"}</td>
                     <td className="px-4 py-4 text-muted-foreground">{formatBytes(upload.size_bytes)}</td>
@@ -62,7 +63,7 @@ export function UploadsTableShell({ uploads, nextLimit }: UploadsTableShellProps
                       <div className="mt-1 text-xs text-muted-foreground/80">{formatRemainingLifetime(upload.expires_at)}</div>
                     </td>
                     <td className="px-4 py-4 text-right">
-                      <UploadRowActions uploadId={upload.id} sharePath={upload.kind === "image" ? `/i/${upload.public_id}` : `/f/${upload.public_id}`} />
+                      <UploadRowActions uploadId={upload.id} sharePath={upload.kind === "image" ? `/i/${upload.public_id}` : `/f/${upload.public_id}`} currentName={upload.title ?? upload.original_name} />
                     </td>
                   </tr>
                 ))
@@ -80,7 +81,8 @@ export function UploadsTableShell({ uploads, nextLimit }: UploadsTableShellProps
               <div key={upload.id} className="rounded-2xl border border-white/10 bg-black/10 p-4 transition-colors hover:bg-black/20">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="truncate font-medium text-white">{upload.original_name}</p>
+                    <p className="truncate font-medium text-white">{upload.title ?? upload.original_name}</p>
+                    {upload.title ? <p className="truncate text-xs text-muted-foreground/60">{upload.original_name}</p> : null}
                     <p className="mt-1 text-sm text-muted-foreground">{upload.kind === "image" ? "Bild" : "Datei"} · {formatBytes(upload.size_bytes)}</p>
                   </div>
                   <Badge variant={upload.status === "active" ? "default" : "secondary"}>{upload.status}</Badge>
@@ -91,7 +93,7 @@ export function UploadsTableShell({ uploads, nextLimit }: UploadsTableShellProps
                   <div>{formatRemainingLifetime(upload.expires_at)}</div>
                 </div>
                 <div className="mt-4">
-                  <UploadRowActions uploadId={upload.id} sharePath={upload.kind === "image" ? `/i/${upload.public_id}` : `/f/${upload.public_id}`} />
+                  <UploadRowActions uploadId={upload.id} sharePath={upload.kind === "image" ? `/i/${upload.public_id}` : `/f/${upload.public_id}`} currentName={upload.title ?? upload.original_name} />
                 </div>
               </div>
             ))

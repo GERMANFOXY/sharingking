@@ -60,7 +60,7 @@ export async function getCurrentUserUploads({ limit = 12 }: { limit?: number } =
 
   const { data } = await supabase
     .from("uploads")
-    .select("id, public_id, kind, status, original_name, size_bytes, created_at, expires_at")
+    .select("id, public_id, kind, status, original_name, title, size_bytes, created_at, expires_at")
     .eq("owner_user_id", user.id)
     .neq("status", "deleted")
     .order("created_at", { ascending: false });

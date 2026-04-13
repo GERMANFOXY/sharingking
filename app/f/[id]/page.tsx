@@ -106,7 +106,7 @@ export default async function FilePage({ params }: FilePageProps) {
     <div className="mx-auto flex min-h-[calc(100vh-5rem)] max-w-4xl items-center px-4 py-16 sm:px-6 lg:px-8">
       <div className="w-full rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur-xl">
         <p className="text-sm uppercase tracking-[0.25em] text-primary/80">Datei-Link</p>
-        <h1 className="mt-3 text-2xl font-semibold text-white">{upload.original_name}</h1>
+        <h1 className="mt-3 text-2xl font-semibold text-white">{upload.title ?? upload.original_name}</h1>
         <p className="mt-4 text-sm text-muted-foreground">
           Der Link bleibt stabil unter der SHARINGKING-URL, waehrend die Datei intern ueber eine kurzlebige Signed URL aus
           dem privaten Storage ausgeliefert wird.

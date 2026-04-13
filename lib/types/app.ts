@@ -11,7 +11,7 @@ export type LatestPublicImage = Pick<
 
 export type UserUploadListItem = Pick<
   UploadRecord,
-  "id" | "public_id" | "kind" | "status" | "original_name" | "size_bytes" | "created_at" | "expires_at"
+  "id" | "public_id" | "kind" | "status" | "original_name" | "title" | "size_bytes" | "created_at" | "expires_at"
 >;
 
 export type UserUploadsResult = {

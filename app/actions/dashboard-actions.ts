@@ -59,3 +59,45 @@ export async function deleteUploadAction(_: DashboardActionState, formData: Form
 
   return { success: "Upload wurde geloescht." };
 }
+
+export async function renameUploadAction(_: DashboardActionState, formData: FormData): Promise<DashboardActionState> {
+  const uploadId = String(formData.get("uploadId") ?? "").trim();
+  const newName = String(formData.get("newName") ?? "").trim();
+
+  if (!uploadId) {
+    return { error: "Upload-ID fehlt." };
+  }
+
+  if (!newName) {
+    return { error: "Name darf nicht leer sein." };
+  }
+
+  if (newName.length > 255) {
+    return { error: "Name darf maximal 255 Zeichen lang sein." };
+  }
+
+  const supabase = await createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Bitte zuerst anmelden." };
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("uploads")
+    .update({ title: newName })
+    .eq("id", uploadId)
+    .eq("owner_user_id", user.id);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/");
+  revalidatePath("/dashboard");
+
+  return { success: "Datei wurde umbenannt." };
+}
