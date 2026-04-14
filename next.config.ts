@@ -19,6 +19,7 @@ const basePath = getBasePath();
 
 const nextConfig: NextConfig = {
   ...(basePath ? { basePath } : {}),
+  output: "standalone",
   images: {
     remotePatterns: [
       {

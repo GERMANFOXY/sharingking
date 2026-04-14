@@ -196,22 +196,43 @@ select cron.schedule(
 5. `NEXT_PUBLIC_APP_URL` auf die spaetere Produktiv-Domain setzen, z. B. `https://foxyverse.de/sharingking`.
 6. Nach dem ersten Deploy die finale Domain mit Vercel verbinden.
 
+### Plesk
+
+Diese Anwendung ist keine statische HTML-Seite. Sie nutzt Next.js App Router, Middleware, Route Handler, Server Actions und serverseitige Supabase-Authentifizierung. Ein einfaches Hochladen einer `index.html` auf einen reinen Webspace reicht deshalb nicht aus.
+
+Fuer Plesk brauchst du eine Node.js-faehige Bereitstellung oder einen Reverse-Proxy auf einen Node-Prozess.
+
+1. In Plesk die Node.js-Erweiterung fuer die Domain oder den Anwendungsordner `/sharingking` aktivieren.
+2. `NEXT_PUBLIC_APP_URL` auf `https://foxyverse.de/sharingking` setzen.
+3. Alle weiteren Supabase- und Secret-Variablen in Plesk setzen.
+4. `npm install` ausfuehren.
+5. `npm run build` ausfuehren.
+6. Die App mit `npm start` starten oder den von Next erzeugten Standalone-Output verwenden.
+7. Falls die Hauptdomain weiterhin statisch ueber Plesk bedient wird, `/sharingking` per Reverse-Proxy auf die Node.js-App routen.
+
+Wenn dein Tarif nur statisches Hosting mit `index.html` erlaubt, ist dieses Projekt in der aktuellen Form dort nicht lauffaehig. Dann brauchst du entweder:
+
+- Plesk mit Node.js-Unterstuetzung
+- oder ein Hosting fuer Next.js/Node.js wie Vercel, Railway, Render oder einen eigenen VPS
+
 ### Supabase
 
 1. Neues Supabase-Projekt anlegen oder bestehendes Projekt verwenden.
-2. SQL-Migrationen aus [supabase/migrations](supabase/migrations) anwenden.
-3. Buckets `images` und `files` pruefen.
-4. Auth fuer E-Mail/Passwort und Magic Link aktivieren.
-5. Redirect-URLs fuer Auth setzen:
-  - `http://localhost:3000/auth/callback`
-  - `https://foxyverse.de/sharingking/auth/callback`
-6. Edge-Function-Variablen und Vault-Secrets setzen.
-7. Function `cleanup-expired-uploads` deployen.
-8. Cron-Job ueber die Migration aktivieren.
+1. SQL-Migrationen aus [supabase/migrations](supabase/migrations) anwenden.
+1. Buckets `images` und `files` pruefen.
+1. Auth fuer E-Mail/Passwort und Magic Link aktivieren.
+1. Redirect-URLs fuer Auth setzen.
+
+   - `http://localhost:3000/auth/callback`
+   - `https://foxyverse.de/sharingking/auth/callback`
+
+1. Edge-Function-Variablen und Vault-Secrets setzen.
+1. Function `cleanup-expired-uploads` deployen.
+1. Cron-Job ueber die Migration aktivieren.
 
 ### Erster Live-Test
 
-1. Startseite auf der Vercel-Domain aufrufen und Layout, Footer und Galerie pruefen.
+1. Startseite unter der Produktiv-Domain aufrufen und Layout, Footer und Galerie pruefen.
 2. Anonymen Upload testen.
 3. Registrierten Upload testen.
 4. Login, Register und Magic Link pruefen.
