@@ -5,6 +5,7 @@ import { signOutAction } from "@/app/actions/auth-actions";
 import { Button } from "@/components/ui/button";
 import { APP_COPY } from "@/lib/constants";
 import { createServerClient } from "@/lib/supabase/server";
+import { withAppBasePath } from "@/lib/utils";
 
 export async function SiteHeader() {
   const supabase = await createServerClient();
@@ -40,7 +41,7 @@ export async function SiteHeader() {
         <Link href="/" className="flex items-center gap-3">
           <span className="inline-flex h-20 w-32 items-center justify-center overflow-hidden">
             <Image
-              src="/branding/logo.png"
+              src={withAppBasePath("/branding/logo.png")}
               alt="SHARINGKING Logo"
               width={1408}
               height={768}

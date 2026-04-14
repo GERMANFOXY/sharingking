@@ -116,5 +116,25 @@ export function formatUploadErrorMessage(message: string) {
 }
 
 export function getAppUrl() {
-  return process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? "http://localhost:3000";
+  return process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? "http://localhost:3000/sharingking";
+}
+
+export function getAppBasePath() {
+  try {
+    const pathname = new URL(getAppUrl()).pathname.replace(/\/$/, "");
+    return pathname && pathname !== "/" ? pathname : "";
+  } catch {
+    return "";
+  }
+}
+
+export function withAppBasePath(pathname: string) {
+  const normalizedPath = pathname.startsWith("/") ? pathname : `/${pathname}`;
+  const basePath = getAppBasePath();
+
+  if (normalizedPath === "/") {
+    return basePath || "/";
+  }
+
+  return `${basePath}${normalizedPath}`;
 }

@@ -8,6 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, Trash2, Loader } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { withAppBasePath } from "@/lib/utils";
 
 export default function ProfileDanger({ user }: { user: User }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -23,7 +24,7 @@ export default function ProfileDanger({ user }: { user: User }) {
 
     setLoading(true);
     try {
-      const response = await fetch("/api/auth/delete-account", {
+      const response = await fetch(withAppBasePath("/api/auth/delete-account"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -34,8 +35,7 @@ export default function ProfileDanger({ user }: { user: User }) {
         const data = await response.json();
         setError(data.error || "Fehler beim Löschen des Accounts");
       } else {
-        // Redirect to homepage after successful deletion
-        window.location.href = "/";
+        window.location.href = withAppBasePath("/");
       }
     } catch (err: any) {
       setError(err.message || "Ein Fehler ist aufgetreten");

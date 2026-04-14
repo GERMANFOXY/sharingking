@@ -7,7 +7,7 @@ export const APP_COPY = {
 } as const;
 
 export const APP_LINKS = {
-  siteUrl: "https://sharingking.vercel.app",
+  siteUrl: "https://foxyverse.de/sharingking",
   githubUrl: "https://github.com/GERMANFOXY/sharingking",
 } as const;
 
